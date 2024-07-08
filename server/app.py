@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-from models import db, Restaurant, RestaurantPizza, Pizza
+from models import db, Student, StudentProfile, Teacher, TeacherProfile, Course, Enrollment
 from flask_migrate import Migrate
-from flask import Flask, request, make_response, jsonify
+from flask import Flask, request, make_response, jsonify, render_template
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import validates
 from sqlalchemy.ext.associationproxy import association_proxy
@@ -26,7 +26,7 @@ api = Api(app)
 
 @app.route("/")
 def index():
-    return "<h1>Welcome to the Global Learn Server</h1>"
+    return render_template('index.html')
 
 #Add the routs and views here
 

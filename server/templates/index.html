@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Global Learn</title>
+    <style>
+        /* CSS styles can be added here */
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 20px;
+            padding: 0;
+        }
+        h1 {
+            color: #333;
+        }
+        .endpoint-list {
+            margin-top: 20px;
+        }
+        .endpoint-list a {
+            display: block;
+            margin-bottom: 10px;
+            text-decoration: none;
+            color: #007bff;
+        }
+        .endpoint-list a:hover {
+            text-decoration: underline;
+        }
+        .schema-image {
+            margin-top: 20px;
+            max-width: 100%;
+            height: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Welcome to the Global Learn Server</h1>
+
+    <!-- Endpoint Links -->
+    <div class="endpoint-list">
+        <p>Explore database tables:</p>
+        <a href="/students">Students Table</a>
+        <a href="/student_profiles">Student Profiles Table</a>
+        <a href="/teachers">Teachers Table</a>
+        <a href="/teacher_profiles">Teacher Profiles Table</a>
+        <a href="/courses">Courses Table</a>
+        <a href="/enrollments">Enrollments Table</a>
+    </div>
+
+    <!-- Database Schema Image -->
+    <div>
+        <h2>Database Schema</h2>
+        <p>Below is a visual representation of the database schema:</p>
+        <img src="https://github.com/NB-Kamoni/Images/blob/main/Combined%20Schema-%20global-learn.png?raw=true" alt="Database Schema" class="schema-image">
+        <p><em>Explanation of relationships:</em></p>
+        <ul>
+            <li><strong>Many-to-Many:</strong> Students are enrolled in Courses through Enrollments.</li>
+            <li><strong>One-to-One:</strong> Each Student has a Student Profile.</li>
+            <li><strong>One-to-One:</strong> Each Teacher has a Teacher Profile.</li>
+            <li><strong>One-to-One:</strong> Teachers are allocated to Courses.</li>
+        </ul>
+    </div>
+</body>
+</html>
