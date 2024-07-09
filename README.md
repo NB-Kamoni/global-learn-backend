@@ -70,7 +70,8 @@ flask run
 
 
 ```
-flask run
+git add .
+git commit -m ""
 
 ```
 
@@ -78,7 +79,7 @@ flask run
 
 
 ```
-flask run
+git push --set-upstream origin <branch name>
 
 ```
 
