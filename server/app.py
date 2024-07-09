@@ -28,7 +28,15 @@ api = Api(app)
 def index():
     return render_template('index.html')
 
-#Add the routs and views here
+#Add the routes and views here
+class Courses(Resource):
+    def get(self):
+        courses_dict_list = [course.to_dict() for course in Course.query.all()]
+        response = make_response(courses_dict_list,200)
+        return response
+    
+api.add_resource(Courses, '/courses')
+
 
 if __name__ == '__main__':
     app.run(port=5555, debug=True)
