@@ -21,6 +21,9 @@ class StudentProfile(db.Model, SerializerMixin):
 
     student = db.relationship('Student', back_populates='student_profile', uselist=False)
 
+    # add serialization rules
+    serialize_rules = ('-student.studentProfile',)
+
     def __repr__(self):
         return f'<StudentProfile {self.student_profile_id}>'
 
@@ -34,10 +37,14 @@ class Student(db.Model, SerializerMixin):
     enrollment_date = db.Column(db.Date, nullable=True)
     completion_date = db.Column(db.Date, nullable=True)
     student_profile_id = db.Column(db.Integer, db.ForeignKey('student_profiles.student_profile_id'))
+    
     student_profile = db.relationship('StudentProfile', back_populates='student')
-
     enrollments = db.relationship('Enrollment', back_populates='student')
     courses = association_proxy('enrollments', 'course')
+
+    # add serialization rules
+    serialize_rules = ('-student_profile.student','-enrollments.student')
+
 
     def __repr__(self):
         return f'<Student {self.name}>'
@@ -51,6 +58,10 @@ class TeacherProfile(db.Model, SerializerMixin):
 
     teacher = db.relationship('Teacher', back_populates='teacher_profile', uselist=False)
 
+    # add serialization rules
+    serialize_rules = ('-teacher.teacherProfile',)
+
+
     def __repr__(self):
         return f'<TeacherProfile {self.teacher_profile_id}>'
 
@@ -60,9 +71,13 @@ class Teacher(db.Model, SerializerMixin):
     name = db.Column(db.String(100))
     email = db.Column(db.String(100))
     teacher_profile_id = db.Column(db.Integer, db.ForeignKey('teacher_profiles.teacher_profile_id'))
+    
     teacher_profile = db.relationship('TeacherProfile', back_populates='teacher')
-
     courses = db.relationship('Course', back_populates='teacher')
+
+    # add serialization rules
+    serialize_rules = ('-teacher_profile.teacher','-courses.teacher')
+
 
     def __repr__(self):
         return f'<Teacher {self.name}>'
@@ -80,6 +95,9 @@ class Course(db.Model, SerializerMixin):
     enrollments = db.relationship('Enrollment', back_populates='course')
     students = association_proxy('enrollments', 'student')
 
+    # add serialization rules
+    serialize_rules = ('-teacher.course','-enrollments.course')
+
     def __repr__(self):
         return f'<Course {self.name}>'
 
@@ -94,6 +112,10 @@ class Enrollment(db.Model):
 
     student = db.relationship('Student', back_populates='enrollments')
     course = db.relationship('Course', back_populates='enrollments')
+
+    # add serialization rules
+    serialize_rules = ('-student.enrollments','-course.enrollments')
+
 
     def __repr__(self):
         return f'<Enrollment {self.enrollment_id}>'
