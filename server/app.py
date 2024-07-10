@@ -106,3 +106,31 @@ def delete_teacher_profile(id):
 
 if __name__ == '__main__':
     app.run(port=5555, debug=True)
+
+    # Instructions to import necessary modules and models in Flask shell
+
+# In the terminal, start the Flask shell:
+# flask shell
+
+# Run the following commands in the Flask shell:
+# from app import db
+# from app import Teacher, TeacherProfile
+# 
+# # Retrieve a teacher by their ID
+# teacher_to_update = Teacher.query.get(1)  # Replace 1 with the actual ID of the teacher you want to update
+# 
+# # Check if the teacher exists
+# if teacher_to_update:
+#     # Print the current details of the teacher (optional)
+#     print(f"Current details: Name: {teacher_to_update.name}, Email: {teacher_to_update.email}")
+# 
+#     # Update the teacher's details
+#     teacher_to_update.name = "New Name"  # Replace with the actual new name
+#     teacher_to_update.email = "newemail@example.com"  # Replace with the actual new email
+# 
+#     # Commit the changes to the database
+#     db.session.commit()
+# 
+#     print(f"Teacher {teacher_to_update.name} updated successfully.")
+# else:
+#     print("Teacher not found.")
