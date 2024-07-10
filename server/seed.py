@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from datetime import date
 from app import app, db
 from models import Student, StudentProfile, Teacher, TeacherProfile, Course, Enrollment

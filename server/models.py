@@ -14,11 +14,12 @@ db = SQLAlchemy(metadata=metadata)
 
 class StudentProfile(db.Model, SerializerMixin):
     __tablename__ = 'student_profiles'
-    student_profile_id = db.Column(db.Integer, primary_key=True)
-    bio = db.Column(db.Text)
-    photo_url = db.Column(db.String(255))
 
-    student = db.relationship('Student', back_populates='student_profile', uselist=False)
+    student_profile_id = db.Column(db.Integer, primary_key=True)
+    bio = db.Column(db.Text, nullable=True)
+    photo_url = db.Column(db.String(255), nullable=True)
+
+    student = db.relationship("Student", back_populates="profile", uselist=False, overlaps="student_profile")
 
     def __repr__(self):
         return f'<StudentProfile {self.student_profile_id}>'
@@ -26,15 +27,17 @@ class StudentProfile(db.Model, SerializerMixin):
 class Student(db.Model, SerializerMixin):
     __tablename__ = 'students'
     student_id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100))
-    date_of_birth = db.Column(db.Date)
-    email = db.Column(db.String(100))
-    reg_no = db.Column(db.String(100))
+    name = db.Column(db.String(100), nullable=False)
+    date_of_birth = db.Column(db.Date, nullable=False)
+    email = db.Column(db.String(100), nullable=False)
+    reg_no = db.Column(db.String(100), nullable=False)
     student_profile_id = db.Column(db.Integer, db.ForeignKey('student_profiles.student_profile_id'))
     student_profile = db.relationship('StudentProfile', back_populates='student')
 
     enrollments = db.relationship('Enrollment', back_populates='student')
     courses = association_proxy('enrollments', 'course')
+    
+    profile = db.relationship("StudentProfile", back_populates="student", uselist=False, overlaps="student_profile")
 
     def __repr__(self):
         return f'<Student {self.name}>'
