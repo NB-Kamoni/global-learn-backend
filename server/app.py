@@ -40,6 +40,9 @@ class Teacher(db.Model, SerializerMixin):
     teacher_profile_id = db.Column(db.Integer, db.ForeignKey('teacher_profiles.teacher_profile_id', name='fk_teacher_profiles_teacher_id'))
     teacher_profile = db.relationship('TeacherProfile', back_populates='teacher')
 
+    def __repr__(self):
+        return f'<Teacher {self.name}>'
+
 # API routes for Teacher Profiles
 @app.route('/teacher_profiles', methods=['GET'])
 def get_teacher_profiles():
