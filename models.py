@@ -20,7 +20,11 @@ class StudentProfile(db.Model, SerializerMixin):
     bio = db.Column(db.Text, nullable=True)
     photo_url = db.Column(db.String(255), nullable=True)
 
+<<<<<<< HEAD
     student = db.relationship("Student", back_populates="profile", uselist=False, overlaps="student_profile")
+=======
+    student = db.relationship('Student', back_populates='student_profile', uselist=False)
+>>>>>>> e6d9bc9 (updates)
 
     def __repr__(self):
         return f'<StudentProfile {self.student_profile_id}>'
@@ -28,17 +32,29 @@ class StudentProfile(db.Model, SerializerMixin):
 class Student(db.Model, SerializerMixin):
     __tablename__ = 'students'
     student_id = db.Column(db.Integer, primary_key=True)
+<<<<<<< HEAD
     name = db.Column(db.String(100), nullable=False)
     date_of_birth = db.Column(db.Date, nullable=False)
     email = db.Column(db.String(100), nullable=False)
     reg_no = db.Column(db.String(100), nullable=False)
+=======
+    name = db.Column(db.String(100))
+    date_of_birth = db.Column(db.Date, nullable=False)
+    email = db.Column(db.String(100))
+    reg_no = db.Column(db.String(120))
+    enrollment_date = db.Column(db.Date, nullable=True)
+    completion_date = db.Column(db.Date, nullable=True)
+>>>>>>> e6d9bc9 (updates)
     student_profile_id = db.Column(db.Integer, db.ForeignKey('student_profiles.student_profile_id'))
-    
     student_profile = db.relationship('StudentProfile', back_populates='student')
+
     enrollments = db.relationship('Enrollment', back_populates='student')
     courses = association_proxy('enrollments', 'course')
+<<<<<<< HEAD
     
     profile = db.relationship("StudentProfile", back_populates="student", uselist=False, overlaps="student_profile")
+=======
+>>>>>>> e6d9bc9 (updates)
 
     def __repr__(self):
         return f'<Student {self.name}>'
@@ -52,10 +68,6 @@ class TeacherProfile(db.Model, SerializerMixin):
 
     teacher = db.relationship('Teacher', back_populates='teacher_profile', uselist=False)
 
-    # add serialization rules
-    serialize_rules = ('-teacher.teacherProfile',)
-
-
     def __repr__(self):
         return f'<TeacherProfile {self.teacher_profile_id}>'
 
@@ -65,13 +77,9 @@ class Teacher(db.Model, SerializerMixin):
     name = db.Column(db.String(100))
     email = db.Column(db.String(100))
     teacher_profile_id = db.Column(db.Integer, db.ForeignKey('teacher_profiles.teacher_profile_id'))
-    
     teacher_profile = db.relationship('TeacherProfile', back_populates='teacher')
+
     courses = db.relationship('Course', back_populates='teacher')
-
-    # add serialization rules
-    serialize_rules = ('-teacher_profile.teacher','-courses.teacher')
-
 
     def __repr__(self):
         return f'<Teacher {self.name}>'
@@ -89,9 +97,6 @@ class Course(db.Model, SerializerMixin):
     enrollments = db.relationship('Enrollment', back_populates='course')
     students = association_proxy('enrollments', 'student')
 
-    # add serialization rules
-    serialize_rules = ('-teacher.course','-enrollments.course')
-
     def __repr__(self):
         return f'<Course {self.name}>'
 
@@ -100,16 +105,12 @@ class Enrollment(db.Model):
     enrollment_id = db.Column(db.Integer, primary_key=True)
     student_id = db.Column(db.Integer, db.ForeignKey('students.student_id'))
     course_id = db.Column(db.Integer, db.ForeignKey('courses.course_id'))
-    enrollment_date = db.Column(db.Date, default=date.today())
-    completion_date = db.Column(db.Date, nullable=True)
-    duration_years = db.Column(db.Integer, nullable=True)  # Assuming duration in years
+    enrollment_date = db.Column(db.Date)
+    completion_date = db.Column(db.Date, nullable=False)
+    duration_years = db.Column(db.Integer, nullable=True) 
 
     student = db.relationship('Student', back_populates='enrollments')
     course = db.relationship('Course', back_populates='enrollments')
-
-    # add serialization rules
-    serialize_rules = ('-student.enrollments','-course.enrollments')
-
 
     def __repr__(self):
         return f'<Enrollment {self.enrollment_id}>'
@@ -128,7 +129,7 @@ class Enrollment(db.Model):
             return None
 
         enrollment_date = date.today()
-        completion_date = enrollment_date + timedelta(days=course.duration_years * 365)  # Calculate completion date
+        completion_date = enrollment_date + timedelta(days=course.duration_years * 365)
 
         # Create a new enrollment
         new_enrollment = cls(
@@ -143,7 +144,12 @@ class Enrollment(db.Model):
         student.enrollment_date = enrollment_date
         student.completion_date = completion_date
 
-        db.session.add(new_enrollment)
-        db.session.commit()
+        try:
 
+            db.session.add(new_enrollment)
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            print(f"An error occurred: {e}")
+            return None
         return new_enrollment
