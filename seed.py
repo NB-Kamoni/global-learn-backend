@@ -1,47 +1,147 @@
-#!/usr/bin/env python3
+from app import app
+from models import db, Student, StudentProfile, Teacher, TeacherProfile, Course, Enrollment, TeacherCourse
+from faker import Faker
 from datetime import date
-from app import app, db
-from models import Student, StudentProfile, Teacher, TeacherProfile, Course, Enrollment
+from random import randint, choice
+import os
+from datetime import datetime
+from models import db, Student, StudentProfile, Teacher, TeacherProfile, Course, Enrollment
+from flask_migrate import Migrate
+from flask import Flask, request, make_response, jsonify, render_template, abort
+from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.orm import validates
+from sqlalchemy.ext.associationproxy import association_proxy
+from sqlalchemy_serializer import SerializerMixin
+from flask_restful import Api, Resource
+from dotenv import load_dotenv
+from config import DevelopmentConfig, ProductionConfig, TestingConfig
 
-# Create an application context
-with app.app_context():
-    # Drop all tables and create them again
-    db.drop_all()
-    db.create_all()
+# Load environment variables from .env file
+load_dotenv()
+# Create a Flask application context
 
-    # Create Student Profiles
-    student_profile1 = StudentProfile(bio="Future Fullstack Engineer", photo_url="https://github.com/NB-Kamoni/Images/blob/main/student1.jpg?raw=true")
-    student_profile2 = StudentProfile(bio="Aspiring Dev", photo_url="https://github.com/NB-Kamoni/Images/blob/main/student2.jpg?raw=true")
+app.app_context().push()
 
-    # Create Teachers
-    teacher_profile1 = TeacherProfile(bio="BSc/MSc/PhD", photo_url="https://github.com/NB-Kamoni/Images/blob/main/Teacher1.jpg?raw=true", phone_no=1234567890)
-    teacher_profile2 = TeacherProfile(bio="20 Years of Transforming Lives", photo_url="https://github.com/NB-Kamoni/Images/blob/main/Teacher2.jpg?raw=true", phone_no=9876543210)
-    
-    teacher1 = Teacher(name="Dr. Tena Sana", email="ms@example.com", teacher_profile=teacher_profile1)
-    teacher2 = Teacher(name="Prof. Mnoma Pia", email="mp@example.com", teacher_profile=teacher_profile2)
+# Initialize Flask app
+app = Flask(__name__)
 
-    # Create Courses
-    course1 = Course(name="Mathematics", description="Math course", teacher=teacher1, course_code="MATH101", duration_years=4)
-    course2 = Course(name="Science", description="Science course", teacher=teacher2, course_code="SCI101", duration_years=5)
 
-    # Add Courses and Teachers to the session and commit to ensure they are created
-    db.session.add_all([teacher_profile1, teacher_profile2, teacher1, teacher2, course1, course2])
-    db.session.commit()
+# Load appropriate configuration based on FLASK_ENV
+if os.getenv('FLASK_ENV') == 'production':
+    app.config.from_object('config.ProductionConfig')
+elif os.getenv('FLASK_ENV') == 'testing':
+    app.config.from_object('config.TestingConfig')
+else:
+    app.config.from_object('config.DevelopmentConfig')
 
-    # Create Students and Profiles
-    student1 = Student(name="Peter Hapa", date_of_birth=date(2000, 1, 1), email="ph@example.com", reg_no="s33/5052/2024", student_profile=student_profile1)
-    student2 = Student(name="Mari Dadi", date_of_birth=date(2001, 2, 2), email="kh@example.com", reg_no="s33/4575/2024", student_profile=student_profile2)
+# Configure SQLAlchemy database URI based on environment variables
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
-    db.session.add_all([student_profile1, student_profile2, student1, student2])
-    db.session.commit()
+# Set up database URI based on environment (use DB_EXTERNAL_URL by default)
+if os.getenv('FLASK_ENV') == 'production':
+    app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DB_INTERNAL_URL")
+else:
+    app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DB_EXTERNAL_URL")
 
-    # Enroll Students
-    enrollment1 = Enrollment.enroll_student(student1.student_id, course1.course_id)
-    enrollment2 = Enrollment.enroll_student(student2.student_id, course2.course_id)
+# Set the Flask app secret key from environment variable
+app.config["SECRET_KEY"] = os.getenv("SECRET_KEY")
 
-    if enrollment1 is None:
-        print(f"Failed to enroll student1 in course1")
-    if enrollment2 is None:
-        print(f"Failed to enroll student2 in course2")
+# Initialize SQLAlchemy with the Flask app
+db = SQLAlchemy(app)
 
-    print("Database seeded successfully!")
+# Initialize Flask-Migrate for database migrations
+migrate = Migrate(app, db)
+
+
+# Initialize Flask-RESTful API
+api = Api(app)
+
+
+# Initialize Faker
+fake = Faker()
+
+# Function to create random date of birth
+def random_date_of_birth(start_year=1990, end_year=2005):
+    year = randint(start_year, end_year)
+    month = randint(1, 12)
+    day = randint(1, 28)  # Simplified to avoid issues with February
+    return date(year, month, day)
+
+# Drop all tables and create them again
+db.drop_all()
+db.create_all()
+
+# Create 10 courses
+courses = []
+for _ in range(10):
+    course = Course(
+        course_name=fake.bs(),
+        description=fake.text()
+    )
+    courses.append(course)
+    db.session.add(course)
+
+# Create 50 students with profiles
+students = []
+for _ in range(20):
+    # Create a student profile
+    student_profile = StudentProfile(
+        bio=fake.text(),
+        photo_url=fake.image_url()
+    )
+
+    # Create a student
+    student = Student(
+        name=fake.name(),
+        date_of_birth=random_date_of_birth(),
+        email=fake.email(),
+        reg_no=f's{randint(30, 99)}/{randint(1000, 9999)}/{randint(2020, 2025)}',
+        student_profile=student_profile
+    )
+    students.append(student)
+    db.session.add(student)
+
+# Create 10 teachers with profiles
+teachers = []
+for _ in range(20):
+    # Create a teacher profile
+    teacher_profile = TeacherProfile(
+        bio=fake.text(),
+        photo_url=fake.image_url(),
+        phone_no=fake.phone_number()
+    )
+
+    # Create a teacher
+    teacher = Teacher(
+        name=fake.name(),
+        email=fake.email(),
+        teacher_profile=teacher_profile
+    )
+    teachers.append(teacher)
+    db.session.add(teacher)
+
+# Commit to save courses, students, and teachers to the database
+db.session.commit()
+
+# Enroll students in courses
+for student in students:
+    for _ in range(randint(1, 5)):  # Each student enrolls in 1 to 5 courses
+        enrollment = Enrollment(
+            student_id=student.student_id,
+            course_id=choice(courses).course_id
+        )
+        db.session.add(enrollment)
+
+# Assign teachers to courses
+for teacher in teachers:
+    for _ in range(randint(1, 3)):  # Each teacher teaches 1 to 3 courses
+        teacher_course = TeacherCourse(
+            teacher_id=teacher.teacher_id,
+            course_id=choice(courses).course_id
+        )
+        db.session.add(teacher_course)
+
+# Commit the session to save the enrollments and teacher course assignments to the database
+db.session.commit()
+
+print("Seeding completed successfully!")
