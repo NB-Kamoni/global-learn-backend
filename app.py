@@ -1,17 +1,10 @@
 #!/usr/bin/env python3
-from datetime import datetime
-from models import db, Student, StudentProfile, Teacher, TeacherProfile, Course, Enrollment
-from flask_migrate import Migrate
+from datetime import datetime, date, timedelta
 from flask import Flask, request, make_response, jsonify, render_template, abort
 from flask_sqlalchemy import SQLAlchemy
-<<<<<<< HEAD
-=======
-from datetime import date, timedelta, datetime
->>>>>>> e6d9bc9 (updates)
-from sqlalchemy.orm import validates
-from sqlalchemy.ext.associationproxy import association_proxy
-from sqlalchemy_serializer import SerializerMixin
-from flask_restful import Api, Resource, abort
+from flask_migrate import Migrate
+from flask_restful import Api, Resource
+from models import db, Student, StudentProfile, Teacher, TeacherProfile, Course, Enrollment
 import os
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -23,14 +16,11 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.json.compact = False
 
 migrate = Migrate(app, db)
-
 db.init_app(app)
 
 api = Api(app)
-<<<<<<< HEAD
 
-from models import Student, StudentProfile
-=======
+# Helper function to parse date
 def parse_date(date_str):
     """Convert date string in YYYY-MM-DD format to Python date object."""
     if date_str is None:
@@ -39,17 +29,18 @@ def parse_date(date_str):
         return datetime.strptime(date_str, '%Y-%m-%d').date()
     except ValueError:
         raise ValueError(f"Invalid date format: {date_str}")
+
 # Route to add a student
 @app.route("/students", methods=['POST'])
 def add_student():
     data = request.get_json()
     print(f"Received data: {data}")
     name = data.get('name')
-    date_of_birth = data.get('date_of_birth')
+    date_of_birth = parse_date(data.get('date_of_birth'))
     email = data.get('email')
     reg_no = data.get('reg_no')
-    enrollment_date = data.get('enrollment_date')
-    completion_date = data.get('completion_date')
+    enrollment_date = parse_date(data.get('enrollment_date'))
+    completion_date = parse_date(data.get('completion_date'))
     student_profile_id = data.get('student_profile_id')
 
     # Validate and create student instance
@@ -69,13 +60,14 @@ def add_student():
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 400
+
 # Route to update student information
 @app.route("/students/<int:student_id>", methods=['PUT'])
 def update_student(student_id):
     student = Student.query.get_or_404(student_id)
     data = request.json
     student.name = data.get('name', student.name)
-    student.date_of_birth = data.get('date_of_birth', student.date_of_birth)
+    student.date_of_birth = parse_date(data.get('date_of_birth', student.date_of_birth))
     student.email = data.get('email', student.email)
     student.reg_no = data.get('reg_no', student.reg_no)
     db.session.commit()
@@ -112,7 +104,6 @@ def list_enrollments():
         Enrollment.completion_date
     ).all()
 
-    # Create a list of dictionaries with the detailed data
     enrollment_list = [
         {
             'enrollment_id': enrollment.enrollment_id,
@@ -133,6 +124,7 @@ def list_enrollments():
     ]
 
     return jsonify(enrollment_list), 200
+
 # Route to view all courses a student is enrolled in
 @app.route("/students/<int:student_id>/courses", methods=['GET'])
 def get_student_courses(student_id):
@@ -169,7 +161,6 @@ def list_courses():
         'description': course.description
     } for course in courses]
     return jsonify(course_list), 200
->>>>>>> e6d9bc9 (updates)
 
 @app.route("/")
 def index():
@@ -182,28 +173,7 @@ def create_student():
     db.session.add(profile)
     db.session.flush()  # Ensure the profile ID is available for the student
 
-<<<<<<< HEAD
-    # Convert date_of_birth string to a Python date object
-    date_of_birth = datetime.strptime(data.get('date_of_birth'), '%Y-%m-%d').date()
-=======
-
-class Courses(Resource):
-    def get(self):
-        courses_dict_list = [course.to_dict() for course in Course.query.all()]
-        response = make_response(courses_dict_list,200)
-        return response
-    
-    def post(self):
-        data = request.json
-        new_course = Course(
-            name = request.form['name'],
-            description = request.form['description'],
-            teacher_id = request.form['teacher_id'],
-            course_code = request.form['course_code'],
-        )
-        db.session.add(new_course)
-        db.session.commit()
->>>>>>> e6d9bc9 (updates)
+    date_of_birth = parse_date(data.get('date_of_birth'))
 
     student = Student(
         name=data.get('name'),
@@ -251,27 +221,38 @@ def get_students():
         } for student in students
     ])
 
-
-<<<<<<< HEAD
-=======
-        res_dict = course.to_dict()
-        response = make_response(res_dict, 200)
+class Courses(Resource):
+    def get(self):
+        courses_dict_list = [course.to_dict() for course in Course.query.all()]
+        response = make_response(courses_dict_list, 200)
         return response
     
+    def post(self):
+        data = request.json
+        new_course = Course(
+            name=data.get('name'),
+            description=data.get('description'),
+            teacher_id=data.get('teacher_id'),
+            course_code=data.get('course_code'),
+        )
+        db.session.add(new_course)
+        db.session.commit()
+        return jsonify({'message': 'Course created successfully'}), 201
+
     def delete(self, id):
         course = Course.query.filter(Course.course_id == id).first()
-        db.session.delete(course)
-        db.session.commit()
-        res_dict = {"message":"course deleted successfully"}
-        response = make_response(res_dict,200)
-        return response
-    
+        if course:
+            db.session.delete(course)
+            db.session.commit()
+            return jsonify({"message": "Course deleted successfully"}), 200
+        else:
+            return jsonify({"error": "Course not found"}), 404
+
 class EnrollmentResource(Resource):
     def post(self):
         data = request.json
         student_id = data.get('student_id')
         course_id = data.get('course_id')
->>>>>>> e6d9bc9 (updates)
 
         # Check for missing fields
         if not student_id or not course_id:
@@ -303,6 +284,7 @@ class EnrollmentResource(Resource):
         db.session.commit()
 
         return jsonify({'message': 'Student enrolled successfully'}), 201
+
 class EnrollmentUpdateResource(Resource):
     def put(self, enrollment_id):
         enrollment = Enrollment.query.get_or_404(enrollment_id)
@@ -317,11 +299,9 @@ class EnrollmentUpdateResource(Resource):
         db.session.commit()
         return jsonify({'message': 'Enrollment updated successfully'})
 
-    
-api.add_resource(CourseById, '/courses/<int:id>')
+api.add_resource(Courses, '/courses')
 api.add_resource(EnrollmentResource, '/enrollments')
 api.add_resource(EnrollmentUpdateResource, '/enrollments/<int:enrollment_id>')
-
 
 if __name__ == '__main__':
     app.run(port=5555, debug=True)

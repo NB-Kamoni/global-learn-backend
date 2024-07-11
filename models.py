@@ -1,4 +1,3 @@
-# models.py
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import MetaData
 from sqlalchemy.ext.associationproxy import association_proxy
@@ -20,41 +19,26 @@ class StudentProfile(db.Model, SerializerMixin):
     bio = db.Column(db.Text, nullable=True)
     photo_url = db.Column(db.String(255), nullable=True)
 
-<<<<<<< HEAD
-    student = db.relationship("Student", back_populates="profile", uselist=False, overlaps="student_profile")
-=======
     student = db.relationship('Student', back_populates='student_profile', uselist=False)
->>>>>>> e6d9bc9 (updates)
 
     def __repr__(self):
         return f'<StudentProfile {self.student_profile_id}>'
 
 class Student(db.Model, SerializerMixin):
     __tablename__ = 'students'
+    
     student_id = db.Column(db.Integer, primary_key=True)
-<<<<<<< HEAD
-    name = db.Column(db.String(100), nullable=False)
-    date_of_birth = db.Column(db.Date, nullable=False)
-    email = db.Column(db.String(100), nullable=False)
-    reg_no = db.Column(db.String(100), nullable=False)
-=======
     name = db.Column(db.String(100))
     date_of_birth = db.Column(db.Date, nullable=False)
     email = db.Column(db.String(100))
     reg_no = db.Column(db.String(120))
     enrollment_date = db.Column(db.Date, nullable=True)
     completion_date = db.Column(db.Date, nullable=True)
->>>>>>> e6d9bc9 (updates)
     student_profile_id = db.Column(db.Integer, db.ForeignKey('student_profiles.student_profile_id'))
+    
     student_profile = db.relationship('StudentProfile', back_populates='student')
-
     enrollments = db.relationship('Enrollment', back_populates='student')
     courses = association_proxy('enrollments', 'course')
-<<<<<<< HEAD
-    
-    profile = db.relationship("StudentProfile", back_populates="student", uselist=False, overlaps="student_profile")
-=======
->>>>>>> e6d9bc9 (updates)
 
     def __repr__(self):
         return f'<Student {self.name}>'
@@ -77,8 +61,8 @@ class Teacher(db.Model, SerializerMixin):
     name = db.Column(db.String(100))
     email = db.Column(db.String(100))
     teacher_profile_id = db.Column(db.Integer, db.ForeignKey('teacher_profiles.teacher_profile_id'))
+    
     teacher_profile = db.relationship('TeacherProfile', back_populates='teacher')
-
     courses = db.relationship('Course', back_populates='teacher')
 
     def __repr__(self):
@@ -91,7 +75,7 @@ class Course(db.Model, SerializerMixin):
     description = db.Column(db.Text)
     teacher_id = db.Column(db.Integer, db.ForeignKey('teachers.teacher_id'))
     course_code = db.Column(db.String(100))
-    duration_years = db.Column(db.Integer, nullable=False)  # Duration in years
+    duration_years = db.Column(db.Integer, nullable=False)
 
     teacher = db.relationship('Teacher', back_populates='courses')
     enrollments = db.relationship('Enrollment', back_populates='course')
@@ -145,7 +129,6 @@ class Enrollment(db.Model):
         student.completion_date = completion_date
 
         try:
-
             db.session.add(new_enrollment)
             db.session.commit()
         except Exception as e:
