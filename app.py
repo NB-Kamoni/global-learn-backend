@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from datetime import datetime
-from models import db, Student, StudentProfile, Teacher, TeacherProfile, Course, Enrollment
+
 from flask_migrate import Migrate
 from flask import Flask, request, make_response, jsonify, render_template, abort
 from flask_sqlalchemy import SQLAlchemy
@@ -49,7 +49,7 @@ migrate = Migrate(app, db)
 # Initialize Flask-RESTful API
 api = Api(app)
 
-
+from models import db, Student, StudentProfile, Teacher, TeacherProfile, Course, Enrollment
 ##home
 
 @app.route('/')
