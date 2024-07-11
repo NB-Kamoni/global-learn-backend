@@ -145,7 +145,7 @@ def list_courses():
 def index():
     return render_template('index.html')
 
-<<<<<<< HEAD
+
 #Add the routes and views here
 #Courses
 class Courses(Resource):
@@ -160,6 +160,7 @@ class Courses(Resource):
             description = request.form['description'],
             teacher_id = request.form['teacher_id'],
             course_code = request.form['course_code'],
+            duration_years = request.form['duration_years']
         )
         db.session.add(new_course)
         db.session.commit()
@@ -197,7 +198,7 @@ class CourseById(Resource):
 api.add_resource(CourseById, '/courses/<int:id>')
 
 
-=======
->>>>>>> main
+
+
 if __name__ == '__main__':
     app.run(port=5555, debug=True)
