@@ -54,7 +54,7 @@ class TeacherProfile(db.Model, SerializerMixin):
     teacher_profile_id = db.Column(db.Integer, primary_key=True)
     bio = db.Column(db.Text)
     photo_url = db.Column(db.String(255))
-    phone_no = db.Column(db.String(20))
+    phone_no = db.Column(db.String(50))
 
     teacher = db.relationship('Teacher', back_populates='teacher_profile', uselist=False)
 
