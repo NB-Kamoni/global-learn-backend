@@ -9,12 +9,15 @@ from sqlalchemy.orm import validates
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy_serializer import SerializerMixin
 from flask_restful import Api, Resource
+from werkzeug.exceptions import NotFound
+from flask_cors import CORS
 import os
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 DATABASE = os.environ.get("DB_URI", f"sqlite:///{os.path.join(BASE_DIR, 'app.db')}")
 
 app = Flask(__name__)
+CORS(app)
 app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.json.compact = False
@@ -24,6 +27,31 @@ migrate = Migrate(app, db)
 db.init_app(app)
 
 api = Api(app)
+
+# Error handling
+@app.errorhandler(NotFound)
+def handle_not_found(e):
+    response = make_response(
+        jsonify({'error':'Not Found','message': 'The requested resource does not exist.'}),
+        404
+    )
+    response.headers['Content-Type'] = 'application/json'
+    return response
+
+
+app.register_error_handler(404, handle_not_found)
+# @app.errorhandler(NotFound)
+# def handle_not_found(e):
+
+#     response = make_response(
+#         "Not Found: The requested resource does not exist.",
+#         404
+#     )
+
+#     return response
+
+# app.register_error_handler(404, handle_not_found)
+
 
 # Route to add a student
 @app.route("/students", methods=['POST'])
@@ -131,15 +159,15 @@ def list_students():
     return jsonify(student_list), 200
 
 # Route to list all courses
-@app.route("/courses", methods=['GET'])
-def list_courses():
-    courses = Course.query.all()
-    course_list = [{
-        'course_id': course.course_id,
-        'name': course.name,
-        'description': course.description
-    } for course in courses]
-    return jsonify(course_list), 200
+# @app.route("/courses", methods=['GET'])
+# def list_courses():
+#     courses = Course.query.all()
+#     course_list = [{
+#         'course_id': course.course_id,
+#         'name': course.name,
+#         'description': course.description
+#     } for course in courses]
+#     return jsonify(course_list), 200
 
 @app.route("/")
 def index():
@@ -156,11 +184,11 @@ class Courses(Resource):
     
     def post(self):
         new_course = Course(
-            name = request.form['name'],
-            description = request.form['description'],
-            teacher_id = request.form['teacher_id'],
-            course_code = request.form['course_code'],
-            duration_years = request.form['duration_years']
+            name = request.get_json()["name"],
+            description = request.get_json()["description"],
+            course_code = request.get_json()["course_code"],
+            duration_years = request.get_json()["duration_years"],
+            teacher_id = request.get_json()["teacher_id"],
         )
         db.session.add(new_course)
         db.session.commit()
@@ -173,8 +201,9 @@ api.add_resource(Courses, '/courses')
 
 class CourseById(Resource):
     def get(self, id):
-        course = Course.query.filter_by(course_id=id).first().to_dict()
-        return make_response(jsonify(course), 200)
+        course = Course.query.filter_by(course_id=id).first()
+        course_dict =course.to_dict()
+        return make_response(jsonify(course_dict), 200)
     
     def patch(self, id):
         course = Course.query.filter(Course.course_id == id).first()
