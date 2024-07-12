@@ -1,47 +1,144 @@
-#!/usr/bin/env python3
-from datetime import date
-from app import app, db
-from models import Student, StudentProfile, Teacher, TeacherProfile, Course, Enrollment
+import os
+from dotenv import load_dotenv
+from flask import Flask
+from flask_sqlalchemy import SQLAlchemy
+from models import db, Student, StudentProfile, Teacher, TeacherProfile, Course, Enrollment, TeacherCourse
+from faker import Faker
+from datetime import date, timedelta
+from random import randint, choice
 
-# Create an application context
+# Load environment variables
+load_dotenv()
+
+# Initialize Flask app
+app = Flask(__name__)
+
+# Load appropriate configuration based on FLASK_ENV
+if os.getenv('FLASK_ENV') == 'production':
+    app.config.from_object('config.ProductionConfig')
+elif os.getenv('FLASK_ENV') == 'testing':
+    app.config.from_object('config.TestingConfig')
+else:
+    app.config.from_object('config.DevelopmentConfig')
+
+# Configure SQLAlchemy database URI based on environment variables
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+# Set up database URI based on environment (use DB_EXTERNAL_URL by default)
+if os.getenv('FLASK_ENV') == 'production':
+    app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DB_INTERNAL_URL")
+else:
+    app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DB_EXTERNAL_URL")
+
+# Set the Flask app secret key from environment variable
+app.config["SECRET_KEY"] = os.getenv("SECRET_KEY")
+
+# Initialize SQLAlchemy with the Flask app
+db.init_app(app)
+
+# Seed function to populate the database
+def seed_data():
+    fake = Faker()
+
+    # Seed student profiles
+    student_profiles = []
+    for _ in range(10):
+        student_profile = StudentProfile(
+            bio=fake.paragraph(),
+            photo_url=fake.image_url()
+        )
+        db.session.add(student_profile)
+        student_profiles.append(student_profile)
+    
+    db.session.commit()
+
+    # Seed students
+    students = []
+    for _ in range(20):
+        student = Student(
+            name=fake.name(),
+            date_of_birth=fake.date_of_birth(minimum_age=18, maximum_age=25),
+            email=fake.email(),
+            reg_no=fake.uuid4(),
+            student_profile_id=choice(student_profiles).student_profile_id
+        )
+        db.session.add(student)
+        students.append(student)
+    
+    db.session.commit()
+
+    # Seed teacher profiles
+    teacher_profiles = []
+    for _ in range(5):
+        teacher_profile = TeacherProfile(
+            bio=fake.paragraph(),
+            photo_url=fake.image_url(),
+            phone_no=fake.phone_number()[:10]
+        )
+        db.session.add(teacher_profile)
+        teacher_profiles.append(teacher_profile)
+    
+    db.session.commit()
+
+    # Seed teachers
+    teachers = []
+    for _ in range(8):
+        teacher = Teacher(
+            name=fake.name(),
+            email=fake.email(),
+            teacher_profile_id=choice(teacher_profiles).teacher_profile_id
+        )
+        db.session.add(teacher)
+        teachers.append(teacher)
+    
+    db.session.commit()
+
+    # Seed courses
+    courses = []
+    course_names = ["Mathematics", "Physics", "History", "Biology", "Chemistry", "Literature", "Computer Science", "Geography", "Art", "Music"]
+    for name in course_names:
+        course = Course(
+            course_name=name,
+            description=fake.paragraph()
+        )
+        db.session.add(course)
+        courses.append(course)
+    
+    db.session.commit()
+
+    # Seed enrollments
+    for student in students:
+        for _ in range(randint(1, 3)):  # Each student enrolls in 1-3 courses
+            course = choice(courses)
+            enrollment = Enrollment(
+                student_id=student.student_id,
+                course_id=course.course_id
+            )
+            db.session.add(enrollment)
+    
+    db.session.commit()
+
+    # Seed teacher courses
+    for teacher in teachers:
+        for _ in range(randint(1, 2)):  # Each teacher teaches 1-2 courses
+            course = choice(courses)
+            teacher_course = TeacherCourse(
+                teacher_id=teacher.teacher_id,
+                course_id=course.course_id
+            )
+            db.session.add(teacher_course)
+    
+    db.session.commit()
+
+    print('Database seeded successfully!')
+
+# Create the app context for database operations
 with app.app_context():
-    # Drop all tables and create them again
+    # Drop all tables
     db.drop_all()
+
+    # Create all tables
     db.create_all()
 
-    # Create Student Profiles
-    student_profile1 = StudentProfile(bio="Future Fullstack Engineer", photo_url="https://github.com/NB-Kamoni/Images/blob/main/student1.jpg?raw=true")
-    student_profile2 = StudentProfile(bio="Aspiring Dev", photo_url="https://github.com/NB-Kamoni/Images/blob/main/student2.jpg?raw=true")
-
-    # Create Teachers
-    teacher_profile1 = TeacherProfile(bio="BSc/MSc/PhD", photo_url="https://github.com/NB-Kamoni/Images/blob/main/Teacher1.jpg?raw=true", phone_no=1234567890)
-    teacher_profile2 = TeacherProfile(bio="20 Years of Transforming Lives", photo_url="https://github.com/NB-Kamoni/Images/blob/main/Teacher2.jpg?raw=true", phone_no=9876543210)
-    
-    teacher1 = Teacher(name="Dr. Tena Sana", email="ms@example.com", teacher_profile=teacher_profile1)
-    teacher2 = Teacher(name="Prof. Mnoma Pia", email="mp@example.com", teacher_profile=teacher_profile2)
-
-    # Create Courses
-    course1 = Course(name="Mathematics", description="Math course", teacher=teacher1, course_code="MATH101", duration_years=4)
-    course2 = Course(name="Science", description="Science course", teacher=teacher2, course_code="SCI101", duration_years=5)
-
-    # Add Courses and Teachers to the session and commit to ensure they are created
-    db.session.add_all([teacher_profile1, teacher_profile2, teacher1, teacher2, course1, course2])
-    db.session.commit()
-
-    # Create Students and Profiles
-    student1 = Student(name="Peter Hapa", date_of_birth=date(2000, 1, 1), email="ph@example.com", reg_no="s33/5052/2024", student_profile=student_profile1)
-    student2 = Student(name="Mari Dadi", date_of_birth=date(2001, 2, 2), email="kh@example.com", reg_no="s33/4575/2024", student_profile=student_profile2)
-
-    db.session.add_all([student_profile1, student_profile2, student1, student2])
-    db.session.commit()
-
-    # Enroll Students
-    enrollment1 = Enrollment.enroll_student(student1.student_id, course1.course_id)
-    enrollment2 = Enrollment.enroll_student(student2.student_id, course2.course_id)
-
-    if enrollment1 is None:
-        print(f"Failed to enroll student1 in course1")
-    if enrollment2 is None:
-        print(f"Failed to enroll student2 in course2")
-
-    print("Database seeded successfully!")
+    # Call the seed function
+    seed_data()

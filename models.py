@@ -1,9 +1,10 @@
-# models.py
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import MetaData
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy_serializer import SerializerMixin
 from datetime import date, timedelta
+from random import randint, choice
+from faker import Faker
 
 metadata = MetaData(
     naming_convention={
@@ -13,17 +14,19 @@ metadata = MetaData(
 
 db = SQLAlchemy(metadata=metadata)
 
+#--------------------------------------------
 class StudentProfile(db.Model, SerializerMixin):
     __tablename__ = 'student_profiles'
-
     student_profile_id = db.Column(db.Integer, primary_key=True)
     bio = db.Column(db.Text, nullable=True)
     photo_url = db.Column(db.String(255), nullable=True)
+    student = db.relationship("Student", back_populates="student_profile", uselist=False)
 
-    student = db.relationship("Student", back_populates="profile", uselist=False, overlaps="student_profile")
+    serialize_rules = ('-student',)  # Exclude the student relationship during serialization
 
     def __repr__(self):
         return f'<StudentProfile {self.student_profile_id}>'
+
 
 class Student(db.Model, SerializerMixin):
     __tablename__ = 'students'
@@ -33,31 +36,33 @@ class Student(db.Model, SerializerMixin):
     email = db.Column(db.String(100), nullable=False)
     reg_no = db.Column(db.String(100), nullable=False)
     student_profile_id = db.Column(db.Integer, db.ForeignKey('student_profiles.student_profile_id'))
-    
+
     student_profile = db.relationship('StudentProfile', back_populates='student')
     enrollments = db.relationship('Enrollment', back_populates='student')
     courses = association_proxy('enrollments', 'course')
-    
-    profile = db.relationship("StudentProfile", back_populates="student", uselist=False, overlaps="student_profile")
+
+    serialize_rules = ('-enrollments', '-courses')  # Exclude enrollments and courses relationships during serialization
 
     def __repr__(self):
-        return f'<Student {self.name}>'
+        return (f'<Student(student_id={self.student_id}, name={self.name}, '
+                f'date_of_birth={self.date_of_birth}, email={self.email}, '
+                f'reg_no={self.reg_no}, student_profile_id={self.student_profile_id})>')
+
 
 class TeacherProfile(db.Model, SerializerMixin):
     __tablename__ = 'teacher_profiles'
     teacher_profile_id = db.Column(db.Integer, primary_key=True)
     bio = db.Column(db.Text)
     photo_url = db.Column(db.String(255))
-    phone_no = db.Column(db.Integer)
+    phone_no = db.Column(db.String(50))
 
     teacher = db.relationship('Teacher', back_populates='teacher_profile', uselist=False)
 
-    # add serialization rules
-    serialize_rules = ('-teacher.teacherProfile',)
-
+    serialize_rules = ('-teacher',)  # Exclude the teacher relationship during serialization
 
     def __repr__(self):
         return f'<TeacherProfile {self.teacher_profile_id}>'
+
 
 class Teacher(db.Model, SerializerMixin):
     __tablename__ = 'teachers'
@@ -65,85 +70,57 @@ class Teacher(db.Model, SerializerMixin):
     name = db.Column(db.String(100))
     email = db.Column(db.String(100))
     teacher_profile_id = db.Column(db.Integer, db.ForeignKey('teacher_profiles.teacher_profile_id'))
-    
+
     teacher_profile = db.relationship('TeacherProfile', back_populates='teacher')
-    courses = db.relationship('Course', back_populates='teacher')
+    teacher_courses = db.relationship('TeacherCourse', back_populates='teacher')
+    courses = association_proxy('teacher_courses', 'course')
 
-    # add serialization rules
-    serialize_rules = ('-teacher_profile.teacher','-courses.teacher')
-
+    serialize_rules = ('-teacher_courses', '-courses')  # Exclude teacher_courses and courses relationships during serialization
 
     def __repr__(self):
         return f'<Teacher {self.name}>'
 
+
 class Course(db.Model, SerializerMixin):
     __tablename__ = 'courses'
     course_id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100))
-    description = db.Column(db.Text)
-    teacher_id = db.Column(db.Integer, db.ForeignKey('teachers.teacher_id'))
-    course_code = db.Column(db.String(100))
-    duration_years = db.Column(db.Integer, nullable=False)  # Duration in years
+    course_name = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text, nullable=True)
 
-    teacher = db.relationship('Teacher', back_populates='courses')
     enrollments = db.relationship('Enrollment', back_populates='course')
-    students = association_proxy('enrollments', 'student')
+    teacher_courses = db.relationship('TeacherCourse', back_populates='course')
 
-    # add serialization rules
-    serialize_rules = ('-teacher.course','-enrollments.course')
+    serialize_rules = ('-enrollments', '-teacher_courses')  # Exclude enrollments and teacher_courses relationships during serialization
 
     def __repr__(self):
-        return f'<Course {self.name}>'
+        return f'<Course {self.course_name}>'
 
-class Enrollment(db.Model):
+
+class Enrollment(db.Model, SerializerMixin):
     __tablename__ = 'enrollments'
     enrollment_id = db.Column(db.Integer, primary_key=True)
     student_id = db.Column(db.Integer, db.ForeignKey('students.student_id'))
     course_id = db.Column(db.Integer, db.ForeignKey('courses.course_id'))
-    enrollment_date = db.Column(db.Date, default=date.today())
-    completion_date = db.Column(db.Date, nullable=True)
-    duration_years = db.Column(db.Integer, nullable=True)  # Assuming duration in years
 
     student = db.relationship('Student', back_populates='enrollments')
     course = db.relationship('Course', back_populates='enrollments')
 
-    # add serialization rules
-    serialize_rules = ('-student.enrollments','-course.enrollments')
-
+    serialize_rules = ('-student', '-course')  # Exclude student and course relationships during serialization
 
     def __repr__(self):
-        return f'<Enrollment {self.enrollment_id}>'
+        return f'<Enrollment Student {self.student_id} Course {self.course_id}>'
 
-    @classmethod
-    def enroll_student(cls, student_id, course_id):
-        course = Course.query.get(course_id)
-        student = Student.query.get(student_id)
 
-        if not course:
-            print(f"Course with ID {course_id} not found.")
-            return None
+class TeacherCourse(db.Model, SerializerMixin):
+    __tablename__ = 'teacher_courses'
+    teacher_course_id = db.Column(db.Integer, primary_key=True)
+    teacher_id = db.Column(db.Integer, db.ForeignKey('teachers.teacher_id'))
+    course_id = db.Column(db.Integer, db.ForeignKey('courses.course_id'))
 
-        if not student:
-            print(f"Student with ID {student_id} not found.")
-            return None
+    teacher = db.relationship('Teacher', back_populates='teacher_courses')
+    course = db.relationship('Course', back_populates='teacher_courses')
 
-        enrollment_date = date.today()
-        completion_date = enrollment_date + timedelta(days=course.duration_years * 365)  # Calculate completion date
+    serialize_rules = ('-teacher', '-course')  # Exclude teacher and course relationships during serialization
 
-        # Create a new enrollment
-        new_enrollment = cls(
-            student_id=student_id,
-            course_id=course_id,
-            enrollment_date=enrollment_date,
-            completion_date=completion_date,
-            duration_years=course.duration_years
-        )
-
-        # Update student's enrollment details
-        student.enrollment_date = enrollment_date
-        student.completion_date = completion_date
-
-        db.session.add(new_enrollment)
-        db.session.commit()
-
-        return new_enrollment
+    def __repr__(self):
+        return f'<TeacherCourse Teacher {self.teacher_id} Course {self.course_id}>'
